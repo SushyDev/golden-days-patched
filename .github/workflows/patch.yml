@@ -1,0 +1,67 @@
+name: Sync Fork and Apply Patch
+
+on:
+  schedule:
+    # Run every hour to check for upstream changes
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allow manual triggering
+  
+jobs:
+  sync-and-patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/PoeticRainbow/golden-days.git
+          git fetch upstream
+          
+      - name: Check for new commits
+        id: check
+        run: |
+          LOCAL_COMMIT=$(git rev-parse HEAD)
+          UPSTREAM_COMMIT=$(git rev-parse upstream/main)
+          if [ "$LOCAL_COMMIT" != "$UPSTREAM_COMMIT" ]; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: Merge upstream changes
+        if: steps.check.outputs.changes == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git merge upstream/main --no-edit
+
+      - name: Run chest texture removal script
+        run: |
+          chmod +x ./remove-chest-textures.sh
+          ./remove-chest-textures.sh
+          
+      - name: Apply patch (remove files)
+        if: steps.check.outputs.changes == 'true'
+        run: |
+          # Remove specific files/directories
+          rm -rf path/to/unwanted/files
+          rm -f specific-file.txt
+          
+          # Or apply a git patch file
+          # git apply patches/remove-files.patch
+          
+      - name: Commit changes
+        if: steps.check.outputs.changes == 'true'
+        run: |
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Apply patch: remove unwanted files after upstream sync"
+          fi
+          
+      - name: Push changes
+        if: steps.check.outputs.changes == 'true'
+        run: git push origin main
