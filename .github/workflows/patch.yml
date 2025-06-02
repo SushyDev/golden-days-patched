@@ -39,27 +39,18 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git merge upstream/main --no-edit
 
-      - name: Run chest texture removal script
-        run: |
-          chmod +x ./remove-chest-textures.sh
-          ./remove-chest-textures.sh
-          
-      - name: Apply patch (remove files)
+      - name: Apply patch
         if: steps.check.outputs.changes == 'true'
         run: |
-          # Remove specific files/directories
-          rm -rf path/to/unwanted/files
-          rm -f specific-file.txt
-          
-          # Or apply a git patch file
-          # git apply patches/remove-files.patch
+          chmod +x ./patch.sh
+          ./patch.sh
           
       - name: Commit changes
         if: steps.check.outputs.changes == 'true'
         run: |
           git add -A
           if ! git diff --cached --quiet; then
-            git commit -m "Apply patch: remove unwanted files after upstream sync"
+            git commit -m "Apply patch"
           fi
           
       - name: Push changes
