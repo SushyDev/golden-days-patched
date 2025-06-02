@@ -21,38 +21,20 @@ jobs:
           git remote add upstream https://github.com/PoeticRainbow/golden-days.git
           git fetch upstream
           
-      - name: Check for new commits
+      - name: Check for commit newer than last run
         id: check
         run: |
-          LOCAL_COMMIT=$(git rev-parse HEAD)
-          UPSTREAM_COMMIT=$(git rev-parse upstream/main)
-          if [ "$LOCAL_COMMIT" != "$UPSTREAM_COMMIT" ]; then
-            echo "changes=true" >> $GITHUB_OUTPUT
-          else
-            echo "changes=false" >> $GITHUB_OUTPUT
-          fi
+          echo "changes=true" >> $GITHUB_OUTPUT
           
-      - name: Merge upstream changes
-        if: steps.check.outputs.changes == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git merge upstream/main --no-edit
-
       - name: Apply patch
         if: steps.check.outputs.changes == 'true'
         run: |
           chmod +x ./patch.sh
           ./patch.sh
           
-      - name: Commit changes
+      - name: Create artifact
         if: steps.check.outputs.changes == 'true'
-        run: |
-          git add -A
-          if ! git diff --cached --quiet; then
-            git commit -m "Apply patch"
-          fi
-          
-      - name: Push changes
-        if: steps.check.outputs.changes == 'true'
-        run: git push origin main
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-days-patched-${{ github.run_number }}
+          path: .
